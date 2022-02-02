@@ -14,11 +14,14 @@
 
 use druid::{
     BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx,
-    PaintCtx, Point, Rect, RenderContext, Size, UpdateCtx, Widget, WidgetPod, UnitPoint,
+    PaintCtx, Point, Rect, RenderContext, Size, UpdateCtx, Widget, WidgetId,
+    WidgetPod, UnitPoint,
 };
 use tracing::warn;
 
 use druid::kurbo::Shape;
+
+use crate::RequestCtx;
 use crate::animation::{Animated, AnimationCurve, Interpolate};
 
 /// Stack child position
@@ -332,6 +335,19 @@ impl <T: Data> Stack<T> {
     ) {
         let child = StackChild::new(child, params.into());
         self.children.push(child);
+    }
+
+    /// Move child to another fixed position
+    pub fn move_child(&mut self, ctx: &mut impl RequestCtx, child_id: WidgetId, position: StackChildPosition) {
+        let child = match self.children.iter_mut().find(|c| c.widget.id() == child_id) {
+            Some(child) => child,
+            None => {
+                warn!("Stack::move_child - no such child {:?}", child_id);
+                return;
+            }
+        };
+        child.params.position = Position::Fixed(position);
+        ctx.request_layout();
     }
 }
 

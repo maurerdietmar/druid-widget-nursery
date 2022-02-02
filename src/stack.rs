@@ -349,6 +349,12 @@ impl <T: Data> Stack<T> {
         child.params.position = Position::Fixed(position);
         ctx.request_layout();
     }
+
+    /// Remove a child from the stack
+    pub fn remove_child(&mut self, ctx: &mut impl RequestCtx, child_id: WidgetId) {
+        self.children.retain(|c| c.widget.id() != child_id);
+        ctx.request_layout();
+    }
 }
 
 impl<T: Data> Widget<T> for Stack<T> {

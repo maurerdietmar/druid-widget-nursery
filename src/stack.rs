@@ -355,6 +355,24 @@ impl <T: Data> Stack<T> {
         self.children.retain(|c| c.widget.id() != child_id);
         ctx.request_layout();
     }
+
+    /// Move child to front
+    pub fn child_to_front(&mut self, ctx: &mut impl RequestCtx, child_id: WidgetId) {
+        // todo: use darin_filter() when it gets stable
+        // let removed = self.children.drain_filter(|c| c.widget.id() == child_id);
+        let children = std::mem::take(&mut self.children);
+        let mut removed = Vec::new();
+        for child in children {
+            if child.widget.id() == child_id {
+                removed.push(child);
+            } else {
+                self.children.push(child);
+            }
+        }
+
+        self.children.extend(removed);
+        ctx.request_layout();
+    }
 }
 
 impl<T: Data> Widget<T> for Stack<T> {

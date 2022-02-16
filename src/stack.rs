@@ -12,11 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use druid::theme;
 use druid::{
     BoxConstraints, Data, Env, Event, EventCtx, LayoutCtx, LifeCycle, LifeCycleCtx,
     PaintCtx, Point, Rect, RenderContext, Size, UpdateCtx, Widget, WidgetId,
     WidgetPod, UnitPoint,
 };
+use druid::widget::BackgroundBrush;
+
 use tracing::warn;
 
 use druid::kurbo::Shape;
@@ -136,6 +139,7 @@ pub struct StackChildParams<T> {
     position: Position<T>,
     // We also store the animation state here - just to keep it simple
     animated_position: Animated<StackChildPosition>,
+    modal: bool,
 }
 
 impl <T> From<StackChildPosition> for StackChildParams<T> {
@@ -150,7 +154,8 @@ impl <T> StackChildParams<T> {
     fn new() -> Self {
         Self {
             position: Position::None,
-            animated_position: Animated::jump(StackChildPosition::new()).layout(true)
+            animated_position: Animated::jump(StackChildPosition::new()).layout(true),
+            modal: false,
         }
     }
 
@@ -158,7 +163,8 @@ impl <T> StackChildParams<T> {
     pub fn fixed(position: StackChildPosition) -> Self {
         Self {
             position: Position::Fixed(position),
-            animated_position: Animated::jump(StackChildPosition::new()).layout(true)
+            animated_position: Animated::jump(StackChildPosition::new()).layout(true),
+            modal: false,
         }
     }
 
@@ -172,6 +178,7 @@ impl <T> StackChildParams<T> {
                 .curve(AnimationCurve::EASE_OUT)
                 .duration(0.3)
                 .layout(true),
+            modal: false,
         }
     }
 
@@ -209,6 +216,20 @@ impl <T> StackChildParams<T> {
     /// animate the position change.
     pub fn set_duration(&mut self, duration: f64) {
         self.animated_position.set_duration(duration);
+    }
+
+    /// Builder-style method for specifying the modal flag.
+    pub fn modal(mut self, modal: bool) -> Self {
+        self.set_modal(modal);
+        self
+    }
+
+    /// Set the modal flag
+    ///
+    /// If set, draw a visual mask and suppress input events for
+    /// children below.
+    pub fn set_modal(&mut self, modal: bool) {
+        self.modal = modal;
     }
 }
 
@@ -377,25 +398,35 @@ impl <T: Data> Stack<T> {
 
 impl<T: Data> Widget<T> for Stack<T> {
     fn event(&mut self, ctx: &mut EventCtx<'_, '_>, event: &Event, data: &mut T, env: &Env) {
+        let mut mask_input = false;
+
         for child in self.children.iter_mut().rev() {
             if ctx.is_handled() {
                 return;
             }
 
             let rect = child.widget.layout_rect();
-            let pos_match = match event {
+            let (pos_match, maskable) = match event {
                 Event::MouseMove(mouse_event) | Event::MouseDown(mouse_event) |
                 Event::MouseUp(mouse_event) | Event::Wheel(mouse_event) => {
-                    rect.winding(mouse_event.pos) != 0
+                    (rect.winding(mouse_event.pos) != 0, true)
                 }
-                _ => false,
+                Event::KeyDown(_) | Event::KeyUp(_) | Event::Paste(_) => (false, true),
+                _ => (false, false),
             };
 
-            child.widget.event(ctx, event, data, env);
+            if !(mask_input && maskable) {
+                child.widget.event(ctx, event, data, env);
+            }
+
+            if child.params.modal {
+                mask_input = true;
+            }
 
             // only send to one widget (top widget)
-            if pos_match { break; }
-        }
+            if pos_match { mask_input = true }
+
+         }
 
         if let Event::AnimFrame(nanos) = event {
             for child in self.children.iter_mut() {
@@ -534,6 +565,11 @@ impl<T: Data> Widget<T> for Stack<T> {
             ctx.clip(size.to_rect());
         }
         for child in &mut self.children {
+            if child.params.modal {
+                let bg_color = env.get(theme::WINDOW_BACKGROUND_COLOR).with_alpha(0.5);
+                let mut brush = BackgroundBrush::Color(bg_color);
+                brush.paint(ctx, data, env);
+            }
             child.widget.paint(ctx, data, env);
         }
     }

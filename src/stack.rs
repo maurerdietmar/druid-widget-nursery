@@ -80,6 +80,15 @@ impl Interpolate for StackChildPosition {
 
 impl StackChildPosition {
 
+    pub const FIT: StackChildPosition = StackChildPosition {
+        left: Some(0.),
+        right: Some(0.),
+        top: Some(0.),
+        bottom: Some(0.),
+        width: None,
+        height: None,
+    };
+
     /// Create a new instance, all values set to `None`.
     pub fn new() -> Self {
         Self::default()

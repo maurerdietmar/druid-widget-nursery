@@ -83,6 +83,7 @@ pub use on_monitor::OnMonitor;
 pub use progress_bar::ProgressBar;
 pub use separator::{Orientation, Separator};
 pub use stack::{Stack, StackChildParams, StackChildPosition};
+pub use sub_window_manager::dialog::{Dialog};
 pub use sub_window_manager::manager::{SubWindowManager, SubWindowManagerId};
 pub use sub_window_manager::proxy::{SubWindowLauncher, SubWindowProxy};
 pub use sub_window_manager::window_config::SubWindowConfig;

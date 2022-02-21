@@ -48,7 +48,7 @@ pub(crate) fn add_window<W: Widget<U> + 'static, U: Data>(
     widget: W,
     data: U,
     config: SubWindowConfig,
-) {
+) -> WidgetId {
     let host_id = WidgetId::next();
 
     let window = SubWindow::new(widget, &config, manager, host_id);
@@ -71,6 +71,8 @@ pub(crate) fn add_window<W: Widget<U> + 'static, U: Data>(
 
     let command = SWM_CONNECT_HOST.with(host_id).to(proxy_id);
     ctx.submit_command(command);
+
+    host_id
 }
 
 impl <T: Data> SubWindowManager<T> {

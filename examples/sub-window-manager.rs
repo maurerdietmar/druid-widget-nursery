@@ -20,7 +20,7 @@ use druid::widget::{Button, Flex, Label, TextBox};
 
 use druid_widget_nursery::StackChildPosition;
 
-use druid_widget_nursery::{SubWindowConfig, SubWindowLauncher, SubWindowManager, SubWindowManagerId, SubWindowProxy};
+use druid_widget_nursery::{Dialog, SubWindowConfig, SubWindowLauncher, SubWindowManager, SubWindowManagerId, SubWindowProxy};
 
 #[derive(Clone, Default, Data, Lens)]
 struct AppState {
@@ -31,9 +31,16 @@ struct AppState {
 
 static WINDOW_COUNTER: AtomicUsize = AtomicUsize::new(1);
 
-
-fn build_navigator_page(launcher: SubWindowLauncher<AppState>, page_level: usize) -> impl Widget<AppState> {
+fn build_navigator_page(
+    manager: SubWindowManagerId,
+    launcher: SubWindowLauncher<AppState>,
+    page_level: usize,
+) -> impl Widget<AppState> {
     let page = Flex::column()
+        .with_child({
+            Dialog::new(manager, || TextBox::new().lens(AppState::text1))
+                .title("A Simple Dialog Widget")
+        })
         .with_child(
             Flex::row()
                 .must_fill_main_axis(true)
@@ -55,7 +62,7 @@ fn build_navigator_page(launcher: SubWindowLauncher<AppState>, page_level: usize
                 .with_child(Button::new("Push new page").on_click({
                     let launcher = launcher.clone();
                     move |ctx, data: &mut AppState, _| {
-                        let widget = build_navigator_page(launcher.clone(), page_level + 1);
+                        let widget = build_navigator_page(manager, launcher.clone(), page_level + 1);
                         let config = SubWindowConfig::new().position(StackChildPosition::FIT);
                         launcher.add_window(ctx, widget, data, config);
                     }
@@ -67,7 +74,7 @@ fn build_navigator_page(launcher: SubWindowLauncher<AppState>, page_level: usize
                         let widget = Label::new("This is a stupid text without any information.")
                             .padding(10.);
                         let config = SubWindowConfig::new()
-                            .modal(true)
+                            //.modal(true)
                             .title(format!("Infor Dialog on navigator page level {}", page_level));
                         launcher.add_window(ctx, widget, data, config);
                     }
@@ -123,7 +130,7 @@ fn build_toolbar_ui(manager: SubWindowManagerId) -> impl Widget<AppState> {
             .with_child({
                 let launcher = launcher.clone();
                 Button::new("Navigator Example").on_click(move |ctx, data: &mut AppState, _| {
-                    let widget = build_navigator_page(launcher.clone(), 0);
+                    let widget = build_navigator_page(manager, launcher.clone(), 0);
                     let config = SubWindowConfig::new().position(StackChildPosition::FIT);
                     launcher.add_window(ctx, widget, data, config);
                 })

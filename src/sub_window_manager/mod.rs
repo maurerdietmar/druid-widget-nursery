@@ -1,4 +1,5 @@
 mod commands;
+pub(crate) mod dialog;
 mod host;
 pub(crate) mod manager;
 pub(crate) mod proxy;
